@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Traveller</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Kanit', sans-serif;
+    background: url('4a65abeead3a8d113bccfee5d5d239f4.gif') no-repeat center center/cover;
+    overflow: hidden;
+  }
+
+  .top-controls {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    display: flex;
+    gap: 15px;
+  }
+  select {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
+  .page {
+    display: none;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .page.active { display: flex; }
+
+  h2 { color: white; text-align: center; margin-bottom: 50px; }
+
+  .focus-button {
+    padding: 20px 60px;
+    background-color: #8B4000;
+    color: white;
+    font-size: 1.5rem;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 20px;
+  }
+  .focus-button:hover { background-color: #a14c00; transform: scale(1.05); }
+
+  input[type="number"] {
+    padding: 15px;
+    font-size: 1.2rem;
+    border-radius: 10px;
+    border: none;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  #timer-display { font-size: 3rem; color: white; margin: 30px 0; }
+
+  canvas { background: rgba(255,255,255,0.2); border-radius: 15px; }
+
+  .top-controls select {
+    padding: 10px 20px;
+    background-color: #8B4000;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 5px;
+    transition: 0.2s;
+  }
+
+  .top-controls select:hover {
+    background-color: #a14c00;
+    transform: scale(1.05);
+  }
+
+</style>
+</head>
+<body>
+
+
+<div class="top-controls">
+  <select id="musicSelect" onchange="changeMusic()">
+    <option value="good-night-lofi-cozy-chill-music-160166.mp3">Music</option>
+    <option value="lofi-background-music-401916.mp3">music1</option>
+    <option value="lofi-girl-lofi-background-music-361058.mp3">music2</option>
+    <option value="lofi-relax-lofi-345374.mp3">music3</option>
+    <option value="rainy-day-lofi-394800.mp3">music4</option>
+  </select>
+
+  <select id="bgSelect" onchange="changeBackground()">
+    <option value="4a65abeead3a8d113bccfee5d5d239f4.gif">Background</option>
+    <option value="23a9e16f37d05dcd1d3be915065854b3.gif">Background1</option>
+    <option value="28a1e36191eb43fae5347624b17edf10.gif">Background2</option>
+    <option value="66b71c75101244d6888261e3595c1922.gif">Background3</option>
+  </select>
+</div>
+
+<audio id="bgMusic" loop>
+  <source src="good-night-lofi-cozy-chill-music-160166.mp3" type="audio/mpeg">
+</audio>
+
+<div id="lobby-page" class="page active">
+  <h1 style="color:white; text-align:center; font-size:4rem; margin-bottom:20px;">The Focus</h1>
+  <h2 style="color:white; text-align:center; margin-bottom:50px;">
+    <span style="color:#8B4000;">Take a deep breathe</span>. Step into the zone.
+  </h2>
+  <button class="focus-button" onclick="goPage('set-time-page')">Focus</button>
+</div>
+
+<div id="set-time-page" class="page">
+  <h2>กำหนดเวลาที่จะ Focus</h2>
+  <input type="number" id="focus-minutes">
+  <button class="focus-button" onclick="startFocus()">เริ่ม Focus</button>
+</div>
+
+<div id="timer-page" class="page">
+  <h2>Focus Time</h2>
+  <div id="timer-display">00:00</div>
+  <button class="focus-button" onclick="stopFocus()">หยุด</button>
+</div>
+
+<div id="graph-page" class="page">
+  <h2>สรุปการ Focus</h2>
+
+  <p style="color:white;">รอบปัจจุบัน</p>
+  <canvas id="currentChart" width="300" height="150"></canvas>
+
+  <p style="color:white; margin-top:30px;">รวมประจำสัปดาห์</p>
+  <canvas id="weeklyChart" width="300" height="150"></canvas>
+
+  <button class="focus-button" onclick="goPage('lobby-page')">กลับ Lobby</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let currentTimer;
+let countdownTime = 0;
+
+function goPage(pageId){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+
+  if(pageId === "set-time-page"){
+    const audio = document.getElementById("bgMusic");
+    audio.muted = false;
+    audio.play();
+  }
+}
+
+function startFocus(){
+  const minutes = parseInt(document.getElementById('focus-minutes').value);
+  if(isNaN(minutes) || minutes <=0) { alert('กรุณากรอกเวลาที่ถูกต้อง'); return; }
+  countdownTime = minutes*60;
+  goPage('timer-page');
+  updateTimerDisplay();
+  currentTimer = setInterval(timerTick,1000);
+}
+
+function timerTick(){
+  if(countdownTime <= 0){
+    clearInterval(currentTimer);
+    showGraph();
+    return;
+  }
+  countdownTime--;
+  updateTimerDisplay();
+}
+
+function stopFocus(){
+  clearInterval(currentTimer);
+
+  const minutesFocused = parseInt(document.getElementById('focus-minutes').value) - Math.floor(countdownTime/60);
+  let weeklyData = JSON.parse(localStorage.getItem('weeklyFocus')) || [];
+  weeklyData.push(minutesFocused);
+  localStorage.setItem('weeklyFocus', JSON.stringify(weeklyData));
+
+  showGraph();
+}
+
+function updateTimerDisplay(){
+  let min = Math.floor(countdownTime/60);
+  let sec = countdownTime%60;
+  document.getElementById('timer-display').textContent = `${min}:${sec<10?'0':''}${sec}`;
+}
+
+function showGraph(){
+  goPage('graph-page');
+
+  let weeklyData = JSON.parse(localStorage.getItem('weeklyFocus')) || [];
+  const minutesFocused = parseInt(document.getElementById('focus-minutes').value) - Math.floor(countdownTime/60);
+  weeklyData.push(minutesFocused);
+  localStorage.setItem('weeklyFocus', JSON.stringify(weeklyData));
+
+  const ctx1 = document.getElementById('currentChart').getContext('2d');
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ['รอบนี้'],
+      datasets: [{
+        label:'เวลา Focus (นาที)',
+        data: [minutesFocused],
+        backgroundColor:'#8B4000'
+      }]
+    },
+    options: {
+      responsive:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, max: Math.max(minutesFocused,30) } }
+    }
+  });
+
+  const ctx2 = document.getElementById('weeklyChart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: weeklyData.map((_,i)=>`รอบ ${i+1}`),
+      datasets:[{
+        label:'เวลา Focus (นาที)',
+        data: weeklyData,
+        backgroundColor:'#FFAA33'
+      }]
+    },
+    options: {
+      responsive:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true } }
+    }
+  });
+}
+
+function changeMusic(){
+  const select = document.getElementById("musicSelect");
+  const audio = document.getElementById("bgMusic");
+  audio.src = select.value;
+  audio.play();
+}
+
+function changeBackground(){
+  const bg = document.getElementById("bgSelect").value;
+  document.body.style.background = `url('${bg}') no-repeat center center/cover`;
+}
+</script>
+</body>
+</html>
